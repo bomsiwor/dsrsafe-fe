@@ -8,15 +8,15 @@ export interface IAdviceRecommendation {
 
 export interface IRadionuclideData {
     number: number;
-    series: string;
+    series: string | null;
     name: string;
-    productionData: string;
-    halfLife: number;
-    initialActivity: number;
-    dValue: number;
-    ratioAD: number;
-    wasteType: string;
-    previousUsage: string;
+    productionData: string | null;
+    halfLife: number | null;
+    initialActivity: number | null;
+    dValue: number | null;
+    ratioAD: number | null;
+    wasteType: string | null;
+    previousUsage: string | null;
 }
 
 export type TPredictionAdvice = {

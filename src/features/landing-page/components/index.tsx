@@ -1,6 +1,7 @@
-import { Label } from "@/components/ui/label";
-import { LandingPageLayout } from "./layout";
 import {
+    Alert,
+    AlertDescription,
+    AlertTitle,
     Button,
     Input,
     Select,
@@ -18,48 +19,58 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui";
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { useMutation } from "@tanstack/react-query";
+import { atom, useAtom } from "jotai";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { FormEvent, useState } from "react";
+import { getAdvicePrediction } from "../services/get-advice-prediction";
+import { TPredictionAdvice } from "../types/advisor.type";
+import { LandingPageLayout } from "./layout.advice";
+import { RecommendationAdviceCard } from "./recommendation-card.advice";
+import { RecommendationAdviceRow } from "./recommendation-row.advice";
+
+const advicePredictionAtom = atom<TPredictionAdvice | null>(null);
 
 export const LandingPage = () => {
     // State
     const [years, setYear] = useState<number>(50);
-    const [isLoading, setLoading] = useState<boolean>(false);
+
+    // Atom
+    const [advicePrediction, setAdvicePrediction] =
+        useAtom(advicePredictionAtom);
 
     // Static
     const SLIDER_STEP = 5;
-    const recommendations = [];
-
-    for (let index = 0; index < years / SLIDER_STEP; index++) {
-        recommendations.push(
-            <div className="rounded border border-slate-300 p-2 text-xs space-y-2">
-                <div>
-                    <h4>Year : {index}</h4>
-                    <p>Activity : 0.004 Ci / 1271 GBq</p>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                    <div className="border border-slate-300 rounded p-2">
-                        <p className="font-medium">Reusability Advice</p>
-                        <p>Riset and development</p>
-                    </div>
-
-                    <div className="border border-slate-300 rounded p-2">
-                        <p className="font-medium">Further Recommendation</p>
-                        <p>Don't waste it</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     // Actions
-    function handleGenerateData() {
-        setLoading(true);
+    // Use mutate from react query
+    function handleFormSubmit(e: FormEvent<HTMLFormElement>) {
+        e.preventDefault();
 
-        setTimeout(() => {
-            setLoading(false);
-        }, 3000);
+        const form = new FormData(e.currentTarget);
+
+        const payload = {
+            radionuclide: form.get("radionuclide"),
+            initialActivity: form.get("initialActivity"),
+            year: form.get("year"),
+        };
+
+        console.log(payload);
     }
+
+    const {
+        isPending: isLoading,
+        mutate: handleGenerateData,
+        error,
+        isError,
+    } = useMutation({
+        mutationKey: ["adviceRecommendation"],
+        mutationFn: getAdvicePrediction,
+        onSuccess: (data) => {
+            setAdvicePrediction(data);
+        },
+    });
 
     return (
         <LandingPageLayout>
@@ -71,64 +82,83 @@ export const LandingPage = () => {
                 </section>
 
                 <section className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <div>
-                            <Label htmlFor="radionuclide">Radionuclide</Label>
-                            <Select name="radionuclide">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Choose radionuclide..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="light">Co-60</SelectItem>
-                                    <SelectItem value="dark">Cs-137</SelectItem>
-                                    <SelectItem value="system">
-                                        Am-241
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                    {/* Alert Error */}
+                    {isError && (
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Error</AlertTitle>
+                            <AlertDescription>{error.message}</AlertDescription>
+                        </Alert>
+                    )}
 
-                        <div>
-                            <Label htmlFor="initialActivity">
-                                Initial Activity
-                            </Label>
-                            <Input
-                                type="number"
-                                id="initialActivity"
-                                placeholder="Initial Activity on mCi"
-                            />
-                        </div>
-
-                        <div>
-                            <div className="mb-4">
-                                <Label htmlFor="year">Years interval</Label>
-                                <p className="text-sm">
-                                    Current Value : {years} yr
-                                </p>
+                    <form onSubmit={handleFormSubmit}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div>
+                                <Label htmlFor="radionuclide">
+                                    Radionuclide
+                                </Label>
+                                <Select name="radionuclide">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choose radionuclide..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="light">
+                                            Co-60
+                                        </SelectItem>
+                                        <SelectItem value="dark">
+                                            Cs-137
+                                        </SelectItem>
+                                        <SelectItem value="system">
+                                            Am-241
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <Slider
-                                name="year"
-                                defaultValue={[years]}
-                                onValueChange={(value) => setYear(value[0])}
-                                min={0}
-                                max={150}
-                                step={SLIDER_STEP}
-                            />
-                        </div>
-                    </div>
 
-                    <div>
-                        <Button
-                            size="sm"
-                            onClick={() => handleGenerateData()}
-                            disabled={isLoading}
-                        >
-                            {isLoading && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}{" "}
-                            {isLoading ? "Please wait..." : "Generate Data"}
-                        </Button>
-                    </div>
+                            <div>
+                                <Label htmlFor="initialActivity">
+                                    Initial Activity
+                                </Label>
+                                <Input
+                                    type="number"
+                                    id="initialActivity"
+                                    name="initialActivity"
+                                    placeholder="Initial Activity on mCi"
+                                />
+                            </div>
+
+                            <div>
+                                <div className="mb-4">
+                                    <Label htmlFor="year">Years interval</Label>
+                                    <p className="text-sm">
+                                        Current Value : {years} yr
+                                    </p>
+                                </div>
+                                <Slider
+                                    name="year"
+                                    defaultValue={[years]}
+                                    onValueChange={(value) => setYear(value[0])}
+                                    min={0}
+                                    max={150}
+                                    step={SLIDER_STEP}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <Button
+                                size="sm"
+                                type="submit"
+                                onClick={() => handleGenerateData()}
+                                disabled={isLoading}
+                            >
+                                {isLoading && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}{" "}
+                                {isLoading ? "Please wait..." : "Generate Data"}
+                            </Button>
+                        </div>
+                    </form>
                 </section>
 
                 <section>
@@ -212,26 +242,27 @@ export const LandingPage = () => {
 
                         <div className="p-4 border border-slate-300 rounded overflow-y-scroll">
                             <div>
-                                {isLoading ? (
+                                {isLoading && (
                                     <div className="space-y-4">
                                         <Skeleton className="h-[40px]" />
                                         <Skeleton className="h-[80px]" />
                                         <Skeleton className="h-[80px]" />
                                     </div>
-                                ) : (
-                                    <div>
-                                        <h3 className="text-xl font-medium">
-                                            Reusability advice from model
-                                        </h3>
-                                        <p className="text-sm text-slate-400">
-                                            Result are generated by model using
-                                            data from our database
-                                        </p>
+                                )}
 
-                                        <div className="space-y-2">
-                                            {recommendations}
-                                        </div>
-                                    </div>
+                                {!isLoading && (
+                                    <RecommendationAdviceCard>
+                                        {advicePrediction?.advices.map(
+                                            (item, index) => {
+                                                return (
+                                                    <RecommendationAdviceRow
+                                                        {...item}
+                                                        key={index}
+                                                    />
+                                                );
+                                            }
+                                        )}
+                                    </RecommendationAdviceCard>
                                 )}
                             </div>
                         </div>

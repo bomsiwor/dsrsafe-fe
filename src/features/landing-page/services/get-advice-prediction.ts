@@ -1,10 +1,22 @@
+import { IFetchError } from "@/types/fetch-error.type";
 import { TPredictionAdvice } from "../types/advisor.type";
 
 export async function getAdvicePrediction() {
-    // const response = await fetch("https://jsonplaceholder.typicode.com/posts");
-    // if (!response.ok) {
-    //     throw new Error("Connection error");
-    // }
-    // const result = (await response.json()) as TPredictionAdvice;
-    // return result;
+    try {
+        const response = await fetch("http://localhost:8000/api/get-advice-prediction", {
+            method: "POST"
+        });
+
+        if (!response.ok) {
+            const error = (await response.json()) as IFetchError;
+
+            throw new Error(error.message);
+        }
+
+        const result = (await response.json()).data as TPredictionAdvice;
+
+        return result;
+    } catch (error) {
+        throw new Error((error as Error).message);
+    }
 }
